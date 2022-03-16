@@ -62,7 +62,7 @@ bool thread_queue<T>::try_pop(T& val)
         return false;
     }
     val = std::move(data.front());
-    data.pop();
+    data.pop_back();
     return true;
 }
 
@@ -74,7 +74,7 @@ std::shared_ptr<T> thread_queue<T>::try_pop()
         return std::shared_ptr<T>();
     }
     std::shared_ptr<T> res(std::make_shared<T>(std::move(data.front())));
-    data.pop();
+    data.pop_back();
     return res;
 }
 
