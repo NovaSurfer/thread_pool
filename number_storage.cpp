@@ -9,11 +9,6 @@ number_storage::number_storage(const std::initializer_list<int>& numbers)
     , _base_amount(numbers.size())
 { }
 
-bool number_storage::is_finished() const
-{
-    return _base_amount == _sums + 1;
-}
-
 bool number_storage::pop_numbers(int& first, int& second)
 {
     if(_nums.size() < 2) {
@@ -21,19 +16,19 @@ bool number_storage::pop_numbers(int& first, int& second)
     }
 
     first = _nums.front();
-    _nums.pop_back();
+    _nums.pop();
     second = _nums.front();
-    _nums.pop_back();
+    _nums.pop();
 
     return true;
 }
 
 void number_storage::push_sum(int sum)
 {
-    _nums.push_back(sum);
-    _sums++;
+    _nums.push(sum);
+    ++_sums;
 
-    if(is_finished()) {
+    if(_base_amount == _sums + 1) {
         const float result = static_cast<float>(_nums.front()) / _base_amount;
         _res.set_value(result);
     }
@@ -54,19 +49,19 @@ size_t number_storage::base_amount() const
     return _base_amount;
 }
 
-void number_storage::launch(number_storage& storage, thread_pool& pool)
-{
-    const auto nInitialTasks = storage._base_amount / 2;
-    for(auto i = 0; i < nInitialTasks; ++i) {
-        auto task = std::make_unique<accumulate_task>(storage, pool);
-        pool.submit(std::move(task));
-    }
-    pool.notify();
-}
-
 std::mutex& number_storage::mutex()
 {
     return _mutex;
+}
+
+void number_storage::init_tasks(thread_pool& pool)
+{
+    const auto nInitialTasks = _base_amount / 2;
+    for(auto i = 0; i < nInitialTasks; ++i) {
+        auto task = std::make_unique<accumulate_task>(*this, pool);
+        pool.submit(std::move(task));
+    }
+    pool.notify();
 }
 
 accumulate_task::accumulate_task(number_storage& number_storage, thread_pool& pool)
@@ -76,13 +71,12 @@ accumulate_task::accumulate_task(number_storage& number_storage, thread_pool& po
 
 void accumulate_task::call()
 {
-    auto func = [](int a, int b) { return a + b; };
+    constexpr auto func = [](int a, int b) { return a + b; };
 
     int val1 = 0;
     int val2 = 0;
 
-    if(std::lock_guard lock {_storage.mutex()};
-       !_storage.pop_numbers(val1, val2)) {
+    if(std::lock_guard lock {_storage.mutex()}; !_storage.pop_numbers(val1, val2)) {
         return;
     }
 
@@ -95,8 +89,7 @@ void accumulate_task::call()
         need_task = _storage.numbers_left() >= 2;
     }
 
-    if(need_task)
-    {
+    if(need_task) {
         auto task = std::make_unique<accumulate_task>(_storage, _pool);
         _pool.submit(std::move(task));
     }
