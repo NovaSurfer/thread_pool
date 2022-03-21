@@ -10,4 +10,7 @@ add_executable(thread_pool
         thread_queue.h
         func_wrapper.h
         join_threads.h
-        join_threads.cpp)
+        join_threads.cpp
+        number_storage.cpp
+        number_storage.h
+        )
