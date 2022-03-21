@@ -8,54 +8,39 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
-#include <vector>
+#include <queue>
 
 template <typename T>
 class thread_queue
 {
 public:
     void push(T val);
-    std::shared_ptr<T> try_pop();
-    bool empty() const;
-
+    T try_pop();
     void notify();
-    std::condition_variable& cond()
-    {
-        return cond_var;
-    }
-
 
 private:
     mutable std::mutex mut;
-    std::vector<T> data;
+    std::queue<T> data;
     std::condition_variable cond_var;
-
 };
 
 template <typename T>
 void thread_queue<T>::push(T val)
 {
     std::lock_guard<std::mutex> lk(mut);
-    data.emplace_back(std::move(val));
+    data.push(std::move(val));
 }
 
 template <typename T>
-std::shared_ptr<T> thread_queue<T>::try_pop()
+T thread_queue<T>::try_pop()
 {
     std::lock_guard<std::mutex> lk(mut);
     if(data.empty()) {
-        return std::shared_ptr<T>();
+        return nullptr;
     }
-    std::shared_ptr<T> res(std::make_shared<T>(std::move(data.front())));
-    data.pop_back();
+    T res = std::move(data.front());
+    data.pop();
     return res;
-}
-
-template <typename T>
-bool thread_queue<T>::empty() const
-{
-    std::lock_guard<std::mutex> lk(mut);
-    return data.empty();
 }
 
 template <typename T>
