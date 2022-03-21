@@ -50,26 +50,19 @@ private:
     thread_queue<std::unique_ptr<function_wrapper>> tqueue;
     std::vector<std::thread> threads;
     join_threads joiner;
-    std::mutex _m;
 
     void worker_thread()
     {
-        for(;;) {
-            std::unique_lock lock {_m};
-            if(tqueue.empty() && done) {
-                tqueue.cond().wait(lock);
+        while(!done)
+        {
+            if(auto task = std::move(tqueue.try_pop()))
+            {
+                task->call();
             }
-            const bool needToExit = tqueue.empty() && !done;
-            if(needToExit) {
-                break;
+            else
+            {
+                std::this_thread::yield();
             }
-            if(tqueue.empty()) {
-                continue;
-            }
-            auto task = tqueue.try_pop();
-            tqueue.notify();
-            lock.unlock();
-            task->get()->call();
         }
     }
 };
