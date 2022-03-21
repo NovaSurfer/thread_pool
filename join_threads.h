@@ -11,17 +11,9 @@
 class join_threads
 {
 public:
-    explicit join_threads(std::vector<std::thread>& thrs) : threads(thrs){}
+    explicit join_threads(std::vector<std::thread>& thrs);
+    ~join_threads();
 
-    ~join_threads()
-    {
-        for(auto& thread : threads)
-        {
-            if(thread.joinable()) {
-                thread.join();
-            }
-        }
-    }
 
 private:
     std::vector<std::thread>& threads;
